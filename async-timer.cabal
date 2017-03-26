@@ -1,5 +1,5 @@
 name:                async-timer
-version:             0.1.2
+version:             0.1.3
 synopsis:            Support for timer based execution of IO actions
 description:         Please see README.md
 homepage:            https://github.com/mtesseract/async-timer

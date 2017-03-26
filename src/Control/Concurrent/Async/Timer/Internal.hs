@@ -1,6 +1,4 @@
 {-# LANGUAGE FlexibleContexts         #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE InterruptibleFFI         #-}
 {-# LANGUAGE MultiParamTypeClasses    #-}
 
 module Control.Concurrent.Async.Timer.Internal where
