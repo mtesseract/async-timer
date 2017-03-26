@@ -7,7 +7,7 @@ import           ClassyPrelude
 
 -- | Sleep 'dt' milliseconds.
 millisleep :: Int64 -> IO ()
-millisleep dt = threadDelay (fromIntegral dt * 10 ^ (3 :: Int))
+millisleep dt = threadDelay (fromIntegral dt * 10 ^ 3)
 
 data TimerConf = TimerConf { _timerConfInitDelay :: Int
                            , _timerConfInterval  :: Int }

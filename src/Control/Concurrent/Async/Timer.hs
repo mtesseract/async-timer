@@ -27,4 +27,4 @@ withAsyncTimer conf io = do
                                timerTrigger
   withAsync timerThread $ const (io timer)
 
-  where toMicroseconds x = x * (10 ^ (3 :: Int))
+  where toMicroseconds x = x * (10 ^ 3)
