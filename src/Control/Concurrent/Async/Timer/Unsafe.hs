@@ -11,9 +11,11 @@ module Control.Concurrent.Async.Timer.Unsafe
   , timerWait
   ) where
 
-import           ClassyPrelude
 import qualified Control.Concurrent.Async.Lifted         as Unsafe
 import           Control.Concurrent.Async.Timer.Internal
+import           Control.Concurrent.Lifted
+import           Control.Monad
+import           Control.Monad.Trans.Control
 
 withAsyncTimer :: forall m b. (MonadBaseControl IO m)
                => TimerConf -> (Timer -> m b) -> m b

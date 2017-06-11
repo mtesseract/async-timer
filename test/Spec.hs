@@ -1,13 +1,16 @@
 module Main where
 
-import ClassyPrelude
-import Data.Function ((&))
-import Test.Framework (Test, defaultMain, testGroup)
-import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
-import Criterion.Measurement
-import Control.Concurrent.Async.Timer
-import Data.Typeable
+import           Control.Concurrent
+import           Control.Concurrent.Async.Timer
+import           Control.Exception
+import           Control.Monad
+import           Criterion.Measurement
+import           Data.Function                  ((&))
+import           Data.IORef
+import           Data.Typeable
+import           Test.Framework                 (Test, defaultMain, testGroup)
+import           Test.Framework.Providers.HUnit (testCase)
+import           Test.HUnit                     ((@?=))
 
 data MyException = MyException
     deriving (Show, Typeable)
@@ -18,7 +21,7 @@ main :: IO ()
 main = do
   cap <- getNumCapabilities
   putStrLn ""
-  putStrLn $ "Cap = " ++ tshow cap
+  putStrLn $ "Cap = " ++ show cap
   defaultMain tests
 
 tests :: [Test.Framework.Test]
@@ -38,7 +41,7 @@ test1 = do
   withAsyncTimer conf $ \ timer -> do
     forM_ [1..10] $ \_ -> do
       timerWait timer
-      void $ fork $ myAction counter times
+      void $ forkIO $ myAction counter times
 
   threadDelay 1000
   n <- readIORef counter
@@ -48,12 +51,12 @@ test1 = do
   let deltas = case ts of
                  []         -> []
                  _ : tsTail -> map (\ (a, b) -> a - b) $ zip ts tsTail
-                 
+
       diff   = sum deltas - 9
-  forM_ deltas (\ dt -> putStrLn $ "dt = " ++ tshow dt)
-  putStrLn $ "average dt = " ++ tshow diff
+  forM_ deltas (\ dt -> putStrLn $ "dt = " ++ show dt)
+  putStrLn $ "average dt = " ++ show diff
   return ()
-  
+
   where myAction :: IORef Int -> IORef [Double] -> IO ()
         myAction counter times = do
           t <- getTime
@@ -64,5 +67,5 @@ test1 = do
           let n' = n + 1
           writeIORef counter n'
           modifyIORef times (t :)
-          putStrLn $ "Tick no. " ++ tshow n' ++ " (t = " ++ tshow t ++ ")"
+          putStrLn $ "Tick no. " ++ show n' ++ " (t = " ++ show t ++ ")"
           threadDelay 500000
