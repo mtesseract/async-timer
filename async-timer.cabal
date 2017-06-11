@@ -1,7 +1,9 @@
 name:                async-timer
-version:             0.1.3
-synopsis:            Support for timer based execution of IO actions
-description:         Please see README.md
+version:             0.1.3.1
+synopsis:            Provides API for timer based execution of IO actions
+description:         This is a lightweight package built on top of the async package
+                     providing easy to use periodic timers. This can be used for executing
+                     IO actions periodically.
 homepage:            https://github.com/mtesseract/async-timer
 license:             BSD3
 license-file:        LICENSE
@@ -19,10 +21,10 @@ library
                      , Control.Concurrent.Async.Timer.Unsafe
   other-modules:       Control.Concurrent.Async.Timer.Internal
   build-depends:       base >= 4.7 && < 5
-                     , lifted-async
-                     , classy-prelude
+                     , lifted-base >= 0.2.3.11 && < 0.3
+                     , lifted-async >= 0.9.1.1 && < 0.10
+                     , monad-control >= 1.0.1.0 && < 1.1
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
   ghc-options:         -Wall -fno-warn-type-defaults
 
 test-suite async-timer-test
@@ -30,7 +32,7 @@ test-suite async-timer-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
-                     , classy-prelude
+                     , lifted-async
                      , async-timer
                      , HUnit
                      , test-framework
@@ -39,8 +41,7 @@ test-suite async-timer-test
                      , criterion
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
+  default-extensions:  OverloadedStrings
 
 source-repository head
   type:     git

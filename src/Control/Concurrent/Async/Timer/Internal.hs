@@ -1,9 +1,12 @@
-{-# LANGUAGE FlexibleContexts         #-}
-{-# LANGUAGE MultiParamTypeClasses    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Control.Concurrent.Async.Timer.Internal where
 
-import           ClassyPrelude
+import           Control.Concurrent.Lifted
+import           Control.Monad
+import           Control.Monad.Trans.Control
+import           Data.Int
 
 -- | Sleep 'dt' milliseconds.
 millisleep :: Int64 -> IO ()
@@ -22,14 +25,12 @@ timerConfSetInitDelay n conf = conf { _timerConfInitDelay = n }
 timerConfSetInterval :: Int -> TimerConf -> TimerConf
 timerConfSetInterval n conf = conf { _timerConfInterval = n }
 
-data Timer = Timer { timerMVar :: MVar () }
+newtype Timer = Timer { timerMVar :: MVar () }
 
-timerLoop :: MonadBaseControl IO m
-          => m () -> m () -> m () -> m ()
+timerLoop :: MonadBaseControl IO m => m () -> m () -> m () -> m ()
 timerLoop initDelay intervalDelay timerTrigger = do
   initDelay
   forever $ timerTrigger >> intervalDelay
 
-timerWait :: MonadBaseControl IO m
-          => Timer -> m ()
+timerWait :: MonadBaseControl IO m => Timer -> m ()
 timerWait = void . takeMVar . timerMVar
