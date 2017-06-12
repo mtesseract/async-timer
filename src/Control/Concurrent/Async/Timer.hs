@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
 
 module Control.Concurrent.Async.Timer
   ( Timer
@@ -13,21 +12,19 @@ module Control.Concurrent.Async.Timer
 
 import           Control.Concurrent.Async.Lifted.Safe
 import           Control.Concurrent.Async.Timer.Internal
-import           Control.Concurrent.Lifted
-import           Control.Monad
+import qualified Control.Concurrent.Async.Timer.Unsafe   as Unsafe
+import           Control.Exception.Safe
 import           Control.Monad.Trans.Control
 
-withAsyncTimer :: forall m b. (MonadBaseControl IO m, Forall (Pure m))
+-- | Spawn a timer thread based on the provided timer configuration
+-- and then run the provided IO action, which receives the new timer
+-- as an argument and call 'timerWait' on it for synchronization. When
+-- the provided IO action has terminated, the timer thread will be
+-- terminated also.
+--
+-- This functions requires the contraint @'Forall' ('Pure' m)@, which
+-- means that the monad 'm' needs to satisfy @'StM' m a ~ a@ for all
+-- 'a'.
+withAsyncTimer :: (MonadBaseControl IO m, MonadMask m, Forall (Pure m))
                => TimerConf -> (Timer -> m b) -> m b
-withAsyncTimer conf io = do
-  mVar <- newEmptyMVar
-  let timer        = Timer { timerMVar = mVar }
-      timerTrigger = void $ tryPutMVar mVar ()
-      initDelay'   = toMicroseconds $ _timerConfInitDelay conf
-      interval'    = toMicroseconds $ _timerConfInterval  conf
-      timerThread  = timerLoop (threadDelay initDelay')
-                               (threadDelay interval')
-                               timerTrigger
-  withAsync timerThread $ const (io timer)
-
-  where toMicroseconds x = x * (10 ^ 3)
+withAsyncTimer = Unsafe.withAsyncTimer
