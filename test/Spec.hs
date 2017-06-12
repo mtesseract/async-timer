@@ -34,36 +34,34 @@ test1 :: IO ()
 test1 = do
   let conf = defaultTimerConf & timerConfSetInitDelay    0
                               & timerConfSetInterval  1000 -- ms
+      noOfTicks = 5
 
   counter <- newIORef 0
   times <- newIORef []
 
-  withAsyncTimer conf $ \ timer -> do
-    forM_ [1..10] $ \_ -> do
+  withAsyncTimer conf $ \ timer ->
+    forM_ [1..noOfTicks] $ \_ -> do
       timerWait timer
       void $ forkIO $ myAction counter times
 
-  threadDelay 1000
+  threadDelay (5 * 10^5)
   n <- readIORef counter
-  n @?= 10
+  n @?= noOfTicks
 
   ts <- readIORef times
   let deltas = case ts of
                  []         -> []
-                 _ : tsTail -> map (\ (a, b) -> a - b) $ zip ts tsTail
+                 _ : tsTail -> zipWith (-) ts tsTail
 
-      diff   = sum deltas - 9
+      avgDiff = sum (map (subtract 1) deltas) / fromIntegral (length deltas)
   forM_ deltas (\ dt -> putStrLn $ "dt = " ++ show dt)
-  putStrLn $ "average dt = " ++ show diff
+  putStrLn $ "average dt = " ++ show avgDiff
   return ()
 
   where myAction :: IORef Int -> IORef [Double] -> IO ()
         myAction counter times = do
           t <- getTime
           n <- readIORef counter
-          if n == 10
-             then throwIO MyException
-             else return ()
           let n' = n + 1
           writeIORef counter n'
           modifyIORef times (t :)
