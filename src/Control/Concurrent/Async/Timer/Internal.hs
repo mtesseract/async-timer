@@ -1,29 +1,13 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE LambdaCase #-}
 
-module Control.Concurrent.Async.Timer.Internal
-  ( Timer(..)
-  , TimerConf(..)
-  , TimerException(..)
-  , defaultTimerConf
-  , timerThread
-  , timerConfSetInitDelay
-  , timerConfSetInterval
-  , timerWait
-  ) where
+module Control.Concurrent.Async.Timer.Internal where
 
-import           Control.Concurrent.Lifted
+import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe
-import           Control.Monad
-import           Control.Monad.Base
-import           Control.Monad.Trans.Control
-
--- | Timer specific exception; only used for a graceful termination
--- mechanism for timer threads.
-data TimerException = TimerEnd deriving (Typeable, Show)
-
-instance Exception TimerException
+import           Control.Monad            (forever, void)
+import           Control.Monad.IO.Unlift
+import           UnliftIO.Async
+import           UnliftIO.Concurrent
 
 -- | This is the type of timer handle, which will be provided to the
 -- IO action to be executed within 'withAsyncTimer'. The user can use
@@ -35,16 +19,8 @@ newtype Timer = Timer { timerMVar :: MVar () }
 data TimerConf = TimerConf { _timerConfInitDelay :: Int
                            , _timerConfInterval  :: Int }
 
--- | This exception handler acts on exceptions of type
--- 'TimerException'. What it essentially does is providing a mechanism
--- for graceful termination of timer threads by simply ignoring the
--- TimerEnd exception.
-timerHandler :: Monad m => Handler m ()
-timerHandler = Handler $ \case
-  TimerEnd -> return ()
-
 -- | Sleep 'dt' milliseconds.
-millisleep :: MonadBase IO m => Int -> m ()
+millisleep :: MonadIO m => Int -> m ()
 millisleep dt = threadDelay (fromIntegral dt * 10 ^ 3)
 
 -- | Default timer configuration specifies no initial delay and an
@@ -61,17 +37,38 @@ timerConfSetInitDelay n conf = conf { _timerConfInitDelay = n }
 timerConfSetInterval :: Int -> TimerConf -> TimerConf
 timerConfSetInterval n conf = conf { _timerConfInterval = n }
 
--- | IO action to be executed within in a timer thread.
-timerThread :: (MonadBaseControl IO m, MonadCatch m) => Int -> Int -> MVar () -> m ()
-timerThread initDelay intervalDelay syncMVar =
-  catches (timerLoop initDelay intervalDelay syncMVar) [timerHandler]
-
 -- | Timer loop to be executed within in a timer thread.
-timerLoop :: (MonadBaseControl IO m) => Int -> Int -> MVar () -> m ()
+timerLoop :: MonadUnliftIO m => Int -> Int -> MVar () -> m ()
 timerLoop initDelay intervalDelay syncMVar = do
   millisleep initDelay
   forever $ putMVar syncMVar () >> millisleep intervalDelay
 
 -- | Wait for the next synchronization event on the givem timer.
-timerWait :: MonadBaseControl IO m => Timer -> m ()
+timerWait :: MonadUnliftIO m => Timer -> m ()
 timerWait = void . takeMVar . timerMVar
+
+-- | Spawn a timer thread based on the provided timer configuration
+-- and then run the provided IO action, which receives the new timer
+-- as an argument and call 'timerWait' on it for synchronization. When
+-- the provided IO action has terminated, the timer thread will be
+-- terminated also.
+withAsyncTimer
+  :: (MonadUnliftIO m, MonadMask m)
+  => TimerConf
+  -> (Timer -> m b)
+  -> m b
+withAsyncTimer conf io = do
+  -- This MVar will be our synchronization mechanism.
+  mVar <- newEmptyMVar
+  let timer         = Timer { timerMVar = mVar }
+      initDelay     = _timerConfInitDelay conf
+      intervalDelay = _timerConfInterval  conf
+  withAsync (timerLoop initDelay intervalDelay mVar) $ \ asyncTimer -> do
+    -- This guarantees that we will be informed right away if our
+    -- timer thread disappears, for example because of an async
+    -- exception:
+    liftIO $ Async.link asyncTimer
+    -- This guarantees that we will throw the TimerEnd exception to
+    -- the timer thread after the provided IO action has ended
+    -- (w/ or w/o an exception):
+    io timer `finally` cancel asyncTimer
