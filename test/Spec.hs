@@ -1,6 +1,7 @@
 module Main where
 
 import           Control.Concurrent
+import           Control.Concurrent.Async
 import           Control.Concurrent.Async.Timer
 import           Control.Exception
 import           Control.Monad
@@ -8,9 +9,8 @@ import           Criterion.Measurement
 import           Data.Function                  ((&))
 import           Data.IORef
 import           Data.Typeable
-import           Test.Framework                 (Test, defaultMain, testGroup)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit                     ((@?=))
+import           Test.Tasty
+import           Test.Tasty.HUnit
 
 data MyException = MyException
     deriving (Show, Typeable)
@@ -18,23 +18,51 @@ data MyException = MyException
 instance Exception MyException
 
 main :: IO ()
-main = do
-  cap <- getNumCapabilities
-  putStrLn ""
-  putStrLn $ "Cap = " ++ show cap
-  defaultMain tests
+main = defaultMain (testGroup "Unit Tests" unitTests)
 
-tests :: [Test.Framework.Test]
-tests =
-  [ testGroup "1st Test Group"
-    [ testCase "1st Test" test1 ]
+unitTests :: [TestTree]
+unitTests =
+  [ testGroup "Timer Tests"
+    [ testCase "Timer reset" testTimerReset
+    , testCase "Simple timer ticks" testSimpleTimerTicks
+    ]
   ]
 
-test1 :: IO ()
-test1 = do
+timedAssert :: Int -> IO () -> IO () -> IO ()
+timedAssert delay before after = do
+  threadDelay $ delay - epsilon
+  before
+  threadDelay $ 2 * epsilon
+  after
+
+  where epsilon = 2 * 10^5
+
+testTimerReset :: IO ()
+testTimerReset = do
+  let conf = defaultTimerConf & timerConfSetInitDelay 1000
+                              & timerConfSetInterval  1000 -- ms
+      noOfTicks = 3
+
+  counter <- newIORef 0
+
+  _handle <- async $
+    withAsyncTimer conf $ \ timer ->
+    forM_ [1..noOfTicks] $ \ idx -> do
+    when (idx == 2) $ do
+      threadDelay (5 * 10^5)
+      timerReset timer
+    timerWait timer
+    modifyIORef counter (+ 1)
+
+  timedAssert (2 * 10^6 + 5 * 10^5)
+              ((1 @=?) =<< readIORef counter)
+              ((2 @=?) =<< readIORef counter)
+
+testSimpleTimerTicks :: IO ()
+testSimpleTimerTicks = do
   let conf = defaultTimerConf & timerConfSetInitDelay    0
                               & timerConfSetInterval  1000 -- ms
-      noOfTicks = 5
+      noOfTicks = 3
 
   counter <- newIORef 0
   times <- newIORef []
@@ -45,8 +73,7 @@ test1 = do
       void $ forkIO $ myAction counter times
 
   threadDelay (5 * 10^5)
-  n <- readIORef counter
-  n @?= noOfTicks
+  readIORef counter >>= (noOfTicks @=?)
 
   ts <- readIORef times
   let deltas = case ts of

@@ -12,13 +12,25 @@ maintainer: mtesseract@silverratio.net
 copyright: (c) 2016-2018 Moritz Clasmeier
 license: BSD3
 github: mtesseract/async-timer
+flags:
+  devel:
+    manual: true
+    default: false
+when:
+- condition: flag(devel)
+  then:
+    ghc-options:
+    - -Wall
+    - -fno-warn-type-defaults
+    - -Werror
+  else:
+    ghc-options:
+    - -Wall
+    - -fno-warn-type-defaults
 extra-source-files:
 - README.md
 library:
   source-dirs: src
-  ghc-options:
-  - -Wall
-  - -fno-warn-type-defaults
   exposed-modules:
   - Control.Concurrent.Async.Timer
   dependencies:
@@ -34,15 +46,11 @@ tests:
     source-dirs: test
     default-extensions:
     - OverloadedStrings
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
     dependencies:
+    - tasty
+    - tasty-hunit
     - base
     - async-timer
-    - HUnit
-    - test-framework
-    - test-framework-hunit
     - containers
     - criterion
+    - async
