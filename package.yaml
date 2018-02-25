@@ -24,7 +24,6 @@ library:
   dependencies:
   - base >= 4.9.1.0 && < 5
   - safe-exceptions >= 0.1.5.0 && < 0.2
-  - transformers-base >= 0.4.4 && < 0.5
   - unliftio >= 0.2.4.0 && < 0.3
   - unliftio-core >= 0.1.1.0 && < 0.2
   - safe-exceptions >= 0.1.7.0 && < 0.2
