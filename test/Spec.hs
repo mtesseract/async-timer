@@ -2,7 +2,7 @@ module Main where
 
 import           Control.Concurrent
 import           Control.Concurrent.Async
-import           Control.Concurrent.Async.Timer
+import qualified Control.Concurrent.Async.Timer as Timer
 import           Control.Exception
 import           Control.Monad
 import           Criterion.Measurement
@@ -39,19 +39,20 @@ timedAssert delay before after = do
 
 testTimerReset :: IO ()
 testTimerReset = do
-  let conf = defaultTimerConf & timerConfSetInitDelay 1000
-                              & timerConfSetInterval  1000 -- ms
+  let conf = Timer.defaultConf
+             & Timer.setInitDelay 1000
+             & Timer.setInterval  1000 -- ms
       noOfTicks = 3
 
   counter <- newIORef 0
 
   _handle <- async $
-    withAsyncTimer conf $ \ timer ->
+    Timer.withAsyncTimer conf $ \ timer ->
     forM_ [1..noOfTicks] $ \ idx -> do
     when (idx == 2) $ do
       threadDelay (5 * 10^5)
-      timerReset timer
-    timerWait timer
+      Timer.reset timer
+    Timer.wait timer
     modifyIORef counter (+ 1)
 
   timedAssert (2 * 10^6 + 5 * 10^5)
@@ -60,16 +61,17 @@ testTimerReset = do
 
 testSimpleTimerTicks :: IO ()
 testSimpleTimerTicks = do
-  let conf = defaultTimerConf & timerConfSetInitDelay    0
-                              & timerConfSetInterval  1000 -- ms
+  let conf = Timer.defaultConf
+             & Timer.setInitDelay    0
+             & Timer.setInterval  1000 -- ms
       noOfTicks = 3
 
   counter <- newIORef 0
   times <- newIORef []
 
-  withAsyncTimer conf $ \ timer ->
+  Timer.withAsyncTimer conf $ \ timer ->
     forM_ [1..noOfTicks] $ \_ -> do
-      timerWait timer
+      Timer.wait timer
       void $ forkIO $ myAction counter times
 
   threadDelay (5 * 10^5)

@@ -1,11 +1,24 @@
+{-|
+Module      : Control.Concurrent.Async.Timer
+Description : Public API for asynchronous Timers
+Copyright   : (c) Moritz Clasmeier 2016, 2018
+License     : BSD3
+Maintainer  : mtesseract@silverratio.net
+Stability   : experimental
+Portability : POSIX
+
+This module exports the public API for asynchronous timers.
+-}
+
 module Control.Concurrent.Async.Timer
   ( Timer
-  , defaultTimerConf
-  , timerConfSetInitDelay
-  , timerConfSetInterval
+  , TimerConf
+  , defaultConf
+  , setInitDelay
+  , setInterval
   , withAsyncTimer
-  , timerWait
-  , timerReset
+  , wait
+  , reset
   ) where
 
 import           Control.Concurrent.Async.Timer.Internal
