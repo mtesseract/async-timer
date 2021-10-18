@@ -9,11 +9,13 @@ IO actions periodically.
 ### Example:
 
 ```haskell
-      let conf = defaultTimerConf & timerConfSetInitDelay  500 -- 500 ms
-                                  & timerConfSetInterval  1000 -- 1 s
-    
+main :: IO ()
+main = do
+      let conf = defaultConf & setInitDelay  500 -- 500 ms
+                             & setInterval  1000 -- 1 s
+
       withAsyncTimer conf $ \ timer -> do
         forM_ [1..10] $ \_ -> do
-          timerWait timer
+          wait timer
           putStrLn "Tick"
 ```
